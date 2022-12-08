@@ -12,6 +12,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu/qemu-print.h"
 #include "qapi/error.h"
 #include "cpu.h"
 #include "trace.h"
@@ -201,8 +202,10 @@ static void virtio_init_region_cache(VirtIODevice *vdev, int n)
         call_rcu(old, virtio_free_region_cache, rcu);
     }
 #ifdef SHADOW_VRING
+    qemu_printf("the name of virtio device: %s\n",vdev->name);
     if (!strcmp(vdev->name, "virtio-blk") || !strcmp(vdev->name, "virtio-net")) {
         virtio_queue_set_shadow_rings(vdev);
+        qemu_printf("strcmp %s\n",vdev->name );
     }
 #endif
     return;
@@ -633,6 +636,7 @@ static void virtqueue_unmap_sg(VirtQueue *vq, const VirtQueueElement *elem,
         hwaddr addr = ((hwaddr)elem->in_sg[i].iov_base & ~(SHADOW_HVA_OFFSET));
         elem->in_sg[i].iov_base = (void *)elem->in_addr[i];
         elem->in_addr[i] = addr;
+        qemu_printf("[qemu shadow_dma]: virtqueue_unmap_sg 632: addr: %llx elem->in_sg[i].iov_base: %llx\n", (long long unsigned int)addr, (long long unsigned int)elem->in_sg[i].iov_base);
 #endif
         dma_memory_unmap(dma_as, elem->in_sg[i].iov_base,
                          elem->in_sg[i].iov_len,
@@ -646,6 +650,7 @@ static void virtqueue_unmap_sg(VirtQueue *vq, const VirtQueueElement *elem,
         hwaddr addr = ((hwaddr)elem->out_sg[i].iov_base & ~(SHADOW_HVA_OFFSET));
         elem->out_sg[i].iov_base = (void *)elem->out_addr[i];
         elem->out_addr[i] = addr;
+        qemu_printf("[qemu shadow_dma]: virtqueue_unmap_sg 646: addr: %llx elem->out_sg[i].iov_base: %llx \n", (long long unsigned int)addr, (long long unsigned int)elem->out_sg[i].iov_base);
 #endif
         dma_memory_unmap(dma_as, elem->out_sg[i].iov_base,
                          elem->out_sg[i].iov_len,
@@ -1468,6 +1473,7 @@ static void *virtqueue_split_pop(VirtQueue *vq, size_t sz)
         hwaddr iov_base = (hwaddr)iov[i].iov_base;
         iov[i].iov_base = (void *)(addr[i] + SHADOW_HVA_OFFSET);
         addr[i] = iov_base;
+        qemu_printf("[qemu shadow_dma]: virtqueue_unmap_sg 1417: addr[i]: %llx iov[i].iov_base: %llx\n", (long long unsigned int)addr[i], (long long unsigned int)iov[i].iov_base);
 #endif
         elem->out_addr[i] = addr[i];
         elem->out_sg[i] = iov[i];
@@ -1477,6 +1483,7 @@ static void *virtqueue_split_pop(VirtQueue *vq, size_t sz)
         hwaddr iov_base = (hwaddr)iov[out_num + i].iov_base;
         iov[out_num + i].iov_base = (void *)(addr[out_num + i] + SHADOW_HVA_OFFSET);
         addr[out_num + i] = iov_base;
+        qemu_printf("[qemu shadow_dma]: virtqueue_unmap_sg 1481: addr[out_num + i]: %llx iov[out_num + i].iov_base: %llx\n", (long long unsigned int)addr[out_num + i], (long long unsigned int)iov[out_num + i].iov_base);
 #endif
         elem->in_addr[i] = addr[out_num + i];
         elem->in_sg[i] = iov[out_num + i];
@@ -2185,6 +2192,7 @@ void virtio_queue_set_shadow_rings(VirtIODevice *vdev)
     vdev->vq[n].vring.caches->desc.ptr = (void *)(SHADOW_HVA_OFFSET + desc);
     vdev->vq[n].vring.caches->avail.ptr = (void *)(SHADOW_HVA_OFFSET + avail);
     vdev->vq[n].vring.caches->used.ptr = (void *)(SHADOW_HVA_OFFSET + used);
+    qemu_printf("virtio_queue_set_shadow_rings: desc: %llx, avail: %llx, used: %llx\n", (long long unsigned int)desc, (long long unsigned int)avail, (long long unsigned int)used);
 }
 #endif
 
