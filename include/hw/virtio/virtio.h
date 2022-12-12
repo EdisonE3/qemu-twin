@@ -29,7 +29,8 @@
 
 /* #define SHADOW_HVA_OFFSET (0x800000000UL) */
 
-
+/* Enable shadow COPY */
+#define SHADOW_COPY
 
 /* A guest should never accept this.  It implies negotiation is broken. */
 #define VIRTIO_F_BAD_FEATURE		30

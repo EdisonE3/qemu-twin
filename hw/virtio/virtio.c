@@ -36,6 +36,11 @@
  */
 #define VIRTIO_PCI_VRING_ALIGN         4096
 
+#ifdef SHADOW_COPY
+char shadow_from[419600];
+char shadow_src[419600];
+#endif
+
 typedef struct VRingDesc
 {
     uint64_t addr;
@@ -878,6 +883,9 @@ void virtqueue_push(VirtQueue *vq, const VirtQueueElement *elem,
     RCU_READ_LOCK_GUARD();
     virtqueue_fill(vq, elem, len, 0);
     virtqueue_flush(vq, 1);
+#ifdef SHADOW_COPY
+    memcpy(shadow_src,shadow_from,len);
+#endif
 }
 
 /* Called within rcu_read_lock().  */
@@ -1637,6 +1645,10 @@ void *virtqueue_pop(VirtQueue *vq, size_t sz)
     if (unlikely(vq->vdev->broken)) {
         return NULL;
     }
+
+#ifdef SHADOW_COPY
+    memcpy(shadow_from, shadow_src, sz);
+#endif
 
     if (virtio_vdev_has_feature(vq->vdev, VIRTIO_F_RING_PACKED)) {
         return virtqueue_packed_pop(vq, sz);
