@@ -23,11 +23,13 @@
 #include "standard-headers/linux/virtio_ring.h"
 
 /* Enable shadow VRING */
-#define SHADOW_VRING
+/* #define SHADOW_VRING */
 /* Enable shadow DMA */
-#define SHADOW_DMA
+/* #define SHADOW_DMA */
 
-#define SHADOW_HVA_OFFSET (0x800000000UL)
+/* #define SHADOW_HVA_OFFSET (0x800000000UL) */
+
+
 
 /* A guest should never accept this.  It implies negotiation is broken. */
 #define VIRTIO_F_BAD_FEATURE		30

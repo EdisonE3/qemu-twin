@@ -16,6 +16,7 @@
 #include "qemu/iov.h"
 #include "qemu/module.h"
 #include "qemu/error-report.h"
+#include "qemu/qemu-print.h"
 #include "qemu/main-loop.h"
 #include "trace.h"
 #include "hw/block/block.h"
@@ -1082,6 +1083,8 @@ static int virtio_blk_load_device(VirtIODevice *vdev, QEMUFile *f,
         virtio_blk_init_request(s, virtio_get_queue(vdev, vq_idx), req);
         req->next = s->rq;
         s->rq = req;
+
+        qemu_printf("blk vdev name: %s\n", vdev->name);
     }
 
     return 0;
@@ -1113,12 +1116,14 @@ static const BlockDevOps virtio_block_ops = {
 
 static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
 {
+    // declare var and initialization
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     VirtIOBlock *s = VIRTIO_BLK(dev);
     VirtIOBlkConf *conf = &s->conf;
     Error *err = NULL;
     unsigned i;
 
+    // check config
     if (!conf->conf.blk) {
         error_setg(errp, "drive property not set");
         return;
@@ -1139,6 +1144,7 @@ static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
         return;
     }
 
+    // deal with configuration (VirtIOBlkConf)
     if (!blkconf_apply_backend_options(&conf->conf,
                                        blk_is_read_only(conf->conf.blk), true,
                                        errp)) {
@@ -1179,8 +1185,10 @@ static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
 
     virtio_blk_set_config_size(s, s->host_features);
 
+    // initialize VirtIODevice
     virtio_init(vdev, "virtio-blk", VIRTIO_ID_BLOCK, s->config_size);
 
+    // add virtqueue
     s->blk = conf->conf.blk;
     s->rq = NULL;
     s->sector_mask = (s->conf.conf.logical_block_size / BDRV_SECTOR_SIZE) - 1;
@@ -1188,6 +1196,10 @@ static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
     for (i = 0; i < conf->num_queues; i++) {
         virtio_add_queue(vdev, conf->queue_size, virtio_blk_handle_output);
     }
+
+    // qemu_printf("conf->num_queues: %d queue size: %d\n", conf->num_queues, conf->queue_size);
+
+    // create virt data plane (data plane is similar to cache)
     virtio_blk_data_plane_create(vdev, conf, &s->dataplane, &err);
     if (err != NULL) {
         error_propagate(errp, err);
@@ -1205,6 +1217,8 @@ static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
                          conf->conf.lcyls,
                          conf->conf.lheads,
                          conf->conf.lsecs);
+
+    // qemu_printf("virtio-blk device init\n");
 }
 
 static void virtio_blk_device_unrealize(DeviceState *dev, Error **errp)
